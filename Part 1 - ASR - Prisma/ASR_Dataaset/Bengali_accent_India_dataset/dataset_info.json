@@ -1,0 +1,80 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "svarah",
+  "dataset_size": 1109356075,
+  "description": "",
+  "download_size": 1094998590,
+  "features": {
+    "audio_filepath": {
+      "_type": "Audio"
+    },
+    "duration": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "gender": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "age-group": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "primary_language": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "native_place_state": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "native_place_district": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "highest_qualification": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "job_category": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "occupation_domain": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio": {
+      "decode": false,
+      "_type": "Audio"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 2204354665,
+  "splits": {
+    "test": {
+      "name": "test",
+      "num_bytes": 1109356075,
+      "num_examples": 6656,
+      "shard_lengths": [
+        3119,
+        3019,
+        518
+      ],
+      "dataset_name": "svarah"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

@@ -1,0 +1,8 @@
+datasets[audio]
+torchcodec
+soundfile
+librosa
+kagglehub
+python-dotenv
+
+openai

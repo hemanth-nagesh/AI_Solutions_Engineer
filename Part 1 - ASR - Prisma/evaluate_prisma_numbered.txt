@@ -1,0 +1,773 @@
+     1	import csv
+     2	import io
+     3	import json
+     4	import os
+     5	import random
+     6	import re
+     7	import sys
+     8	import time
+     9	from pathlib import Path
+    10	
+    11	import requests
+    12	from datasets import load_from_disk, Audio
+    13	from dotenv import load_dotenv
+    14	
+    15	try:
+    16	    from tqdm import tqdm
+    17	    _HAS_TQDM = True
+    18	except ImportError:
+    19	    _HAS_TQDM = False
+    20	
+    21	    def tqdm(iterable=None, total=None, desc=None, unit=None, **kwargs):
+    22	        """Minimal drop-in fallback so the script still runs without tqdm installed."""
+    23	        class _Bar:
+    24	            def __init__(self):
+    25	                self.n = 0
+    26	                self.total = total
+    27	                self.desc = desc or ""
+    28	
+    29	            def _render(self):
+    30	                pct = f"{(self.n / self.total * 100):5.1f}%" if self.total else ""
+    31	                print(f"\r  {self.desc} {pct} ({self.n}/{self.total or '?'})", end="", flush=True)
+    32	
+    33	            def update(self, n=1):
+    34	                self.n += n
+    35	                self._render()
+    36	
+    37	            def set_postfix(self, **kw):
+    38	                extra = " ".join(f"{k}={v}" for k, v in kw.items())
+    39	                print(f"\r  {self.desc} ({self.n}/{self.total or '?'}) {extra}", end="", flush=True)
+    40	
+    41	            def close(self):
+    42	                print()
+    43	
+    44	            def __enter__(self):
+    45	                return self
+    46	
+    47	            def __exit__(self, *a):
+    48	                self.close()
+    49	
+    50	        bar = _Bar()
+    51	        if iterable is not None:
+    52	            for item in iterable:
+    53	                yield item
+    54	                bar.update(1)
+    55	            bar.close()
+    56	        else:
+    57	            return bar
+    58	
+    59	# ---------------------------------------------------------------------------
+    60	# 0.  CONFIGURATION
+    61	# ---------------------------------------------------------------------------
+    62	
+    63	load_dotenv(override=True)
+    64	
+    65	GNANI_API_KEY = os.getenv("GNANI_API_KEY", "vach_1ytE2CY5X2PpPHYVr8ggeXkf7DIpvk8TW1ynnLt3ypq5C1W46LhbKMIYCAWWgEQLIelZ3C52qMP9lFq1GSzH3hbY1utqzzU6_7922fe52b6be429029e9292edcd2adbd")
+    66	HF_TOKEN       = os.getenv("HF_TOKEN", "")   # for downloading signed HF audio URLs
+    67	
+    68	# Gnani Vachana REST STT endpoint
+    69	REST_URL = "https://api.vachana.ai/stt/v3"
+    70	
+    71	BASE_DIR = Path(__file__).parent
+    72	
+    73	# ---------------------------------------------------------------------------
+    74	# Dataset map:
+    75	#   category -> (folder, transcript_col, id_col, duration_col,
+    76	#                audio_col, audio_col_needs_recast,
+    77	#                uses_audio_url, subcategory_col, language_code)
+    78	#
+    79	# audio_col_needs_recast=True  → cast_column(audio_col, Audio(decode=False))
+    80	#                                 before iterating (Svarah datasets)
+    81	# uses_audio_url=True          → no local bytes; download from row["audio_url"]
+    82	#                                 (small/large librispeech duration datasets)
+    83	# ---------------------------------------------------------------------------
+    84	DATASET_MAP = {
+    85	    #  category          folder                           transcript_col   id_col          dur_col         audio_col        recast  url_dl  subcat_col     lang_code
+    86	    "baseline_clean":   ("clean_audio_dataset",           "text",          "id",           "audio_length_s","audio",        False,  False,  None,          "en-IN"),
+    87	    "duration_short":   ("small_audio_dataset",           "text",          "id",           "audio_length_s","audio_url",    False,  True,   None,          "en-IN"),
+    88	    "duration_long":    ("large_audio_dataset",           "text",          "id",           "audio_length_s","audio_url",    False,  True,   None,          "en-IN"),
+    89	    "accent_malayalam": ("Malayalam_accent_India_dataset","text",          None,           "duration",      "audio_filepath",True, False,  None,          "ml-IN"),
+    90	    "accent_bengali":   ("Bengali_accent_India_dataset",  "text",          None,           "duration",      "audio_filepath",True, False,  None,          "bn-IN"),
+    91	    "domain_medical":   ("Medical_ASR_dataset",           "text",          "file_name",    "duration",      "audio",        False,  False,  None,          "en-IN"),
+    92	    "numeric":          ("numbers_dataset",               "transcript",    "clip_id",      "audio_length_s","audio",        False,  False,  "number_type", "en-IN"),
+    93	    "code_switch":      ("Code_Switch_dataset",           "transcription", "audio_file_name",None,          "audio",        False,  False,  None,          "en-IN"),
+    94	    "noise":            ("Noise_English_dataset",         "text",          "sample_id",    None,            "audio",        False,  False,  "noise_type",  "en-IN"),
+    95	}
+    96	
+    97	REPORT_PATH      = BASE_DIR / "prisma_eval_report.md"
+    98	CSV_PATH         = BASE_DIR / "prisma_eval_clipwise.csv"
+    99	CHECKPOINT_PATH  = BASE_DIR / "eval_checkpoint.json"   # clip_id -> transcript (saved after every clip)
+   100	
+   101	LOW_SAMPLE_THRESHOLD = 10   # categories with < N clips get asterisk in report
+   102	MAX_RETRIES          = 2    # retry attempts per clip on transient API error
+   103	
+   104	# ---------------------------------------------------------------------------
+   105	# 1.  TEXT NORMALISATION
+   106	# ---------------------------------------------------------------------------
+   107	
+   108	_NUM_WORD_MAP = {
+   109	    "zero":"0","one":"1","two":"2","three":"3","four":"4","five":"5",
+   110	    "six":"6","seven":"7","eight":"8","nine":"9","ten":"10",
+   111	    "eleven":"11","twelve":"12","thirteen":"13","fourteen":"14",
+   112	    "fifteen":"15","sixteen":"16","seventeen":"17","eighteen":"18",
+   113	    "nineteen":"19","twenty":"20","thirty":"30","forty":"40",
+   114	    "fifty":"50","sixty":"60","seventy":"70","eighty":"80","ninety":"90",
+   115	    "hundred":"100","thousand":"1000","million":"1000000","billion":"1000000000",
+   116	}
+   117	_NUM_WORD_RE = re.compile(
+   118	    r"\b(" + "|".join(re.escape(w) for w in _NUM_WORD_MAP) + r")\b", re.IGNORECASE
+   119	)
+   120	_PUNCT_RE = re.compile(r"[^\w\s]")
+   121	
+   122	
+   123	def normalize(text: str) -> str:
+   124	    """Lowercase -> number-word digits -> strip punctuation -> collapse whitespace."""
+   125	    text = text.lower()
+   126	    text = _NUM_WORD_RE.sub(lambda m: _NUM_WORD_MAP[m.group(0).lower()], text)
+   127	    text = _PUNCT_RE.sub("", text)
+   128	    text = re.sub(r"\s+", " ", text).strip()
+   129	    return text
+   130	
+   131	
+   132	# ---------------------------------------------------------------------------
+   133	# 2.  WER / CER (from-scratch Levenshtein, no external library)
+   134	# ---------------------------------------------------------------------------
+   135	
+   136	def _levenshtein(seq_a, seq_b):
+   137	    """
+   138	    Levenshtein DP on two sequences (word list or char list).
+   139	    Returns (distance, substitutions, deletions, insertions).
+   140	    Back-tracks the DP matrix to count S/D/I separately.
+   141	    """
+   142	    n, m = len(seq_a), len(seq_b)
+   143	    dp = [[0] * (m + 1) for _ in range(n + 1)]
+   144	    for i in range(n + 1): dp[i][0] = i
+   145	    for j in range(m + 1): dp[0][j] = j
+   146	    for i in range(1, n + 1):
+   147	        for j in range(1, m + 1):
+   148	            if seq_a[i-1] == seq_b[j-1]:
+   149	                dp[i][j] = dp[i-1][j-1]
+   150	            else:
+   151	                dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
+   152	    subs = dels = ins = 0
+   153	    i, j = n, m
+   154	    while i > 0 or j > 0:
+   155	        if i > 0 and j > 0 and dp[i][j] == dp[i-1][j-1]:
+   156	            i -= 1; j -= 1
+   157	        elif i > 0 and j > 0 and dp[i][j] == dp[i-1][j-1] + 1:
+   158	            subs += 1; i -= 1; j -= 1
+   159	        elif i > 0 and dp[i][j] == dp[i-1][j] + 1:
+   160	            dels += 1; i -= 1
+   161	        else:
+   162	            ins += 1; j -= 1
+   163	    return dp[n][m], subs, dels, ins
+   164	
+   165	
+   166	def edit_distance_metrics(ref: str, hyp: str) -> dict:
+   167	    """
+   168	    Compute WER and CER from pre-normalised strings.
+   169	    Returns wer, cer, accuracy, and per-type counts.
+   170	    """
+   171	    rw, hw = ref.split(), hyp.split()
+   172	    rc, hc = list(ref.replace(" ", "")), list(hyp.replace(" ", ""))
+   173	    wl = max(len(rw), 1)
+   174	    _, ws, wd, wi = _levenshtein(rw, hw)
+   175	    wer = (ws + wd + wi) / wl
+   176	    cl = max(len(rc), 1)
+   177	    _, cs, cd, ci = _levenshtein(rc, hc)
+   178	    cer = (cs + cd + ci) / cl
+   179	    return {
+   180	        "wer": wer, "cer": cer, "accuracy": max(0.0, 1.0 - wer),
+   181	        "w_subs": ws, "w_dels": wd, "w_ins": wi,
+   182	        "c_subs": cs, "c_dels": cd, "c_ins": ci,
+   183	        "ref_word_count": len(rw),
+   184	    }
+   185	
+   186	
+   187	# ---------------------------------------------------------------------------
+   188	# 3.  CHECKPOINT (save / load transcriptions so restarts skip done clips)
+   189	# ---------------------------------------------------------------------------
+   190	
+   191	def load_checkpoint() -> dict:
+   192	    """Return {clip_id: transcript_str} from the checkpoint file if it exists."""
+   193	    if CHECKPOINT_PATH.exists():
+   194	        try:
+   195	            return json.loads(CHECKPOINT_PATH.read_text(encoding="utf-8"))
+   196	        except Exception:
+   197	            pass
+   198	    return {}
+   199	
+   200	
+   201	def save_checkpoint(ckpt: dict) -> None:
+   202	    """Persist the current checkpoint dict atomically."""
+   203	    tmp = CHECKPOINT_PATH.with_suffix(".json.tmp")
+   204	    tmp.write_text(json.dumps(ckpt, ensure_ascii=False, indent=2), encoding="utf-8")
+   205	    tmp.replace(CHECKPOINT_PATH)
+   206	
+   207	
+   208	def ckpt_text(entry) -> "str | None":
+   209	    """
+   210	    Extract the transcript string from a checkpoint entry.
+   211	    Supports both the legacy format (entry is a plain str) and the new
+   212	    format (entry is {"text": ..., "latency_sec": ...}) so old checkpoint
+   213	    files keep working without needing clips to be re-transcribed.
+   214	    """
+   215	    if entry is None:
+   216	        return None
+   217	    if isinstance(entry, str):
+   218	        return entry
+   219	    if isinstance(entry, dict):
+   220	        return entry.get("text")
+   221	    return None
+   222	
+   223	
+   224	def ckpt_latency(entry) -> "float | None":
+   225	    """Extract the exact per-clip latency (seconds) from a checkpoint entry, if recorded."""
+   226	    if isinstance(entry, dict):
+   227	        return entry.get("latency_sec")
+   228	    return None
+   229	
+   230	
+   231	# ---------------------------------------------------------------------------
+   232	# 4.  AUDIO EXTRACTION
+   233	# ---------------------------------------------------------------------------
+   234	
+   235	def _audio_bytes_from_value(raw) -> bytes | None:
+   236	    """
+   237	    Pull raw WAV/audio bytes out of whatever shape the HF column gives us.
+   238	    Handles: bytes, dict{bytes, path}, AudioDecoder (after no-decode cast).
+   239	    """
+   240	    if raw is None:
+   241	        return None
+   242	    if isinstance(raw, bytes):
+   243	        return raw
+   244	    if isinstance(raw, dict):
+   245	        b = raw.get("bytes")
+   246	        if b:
+   247	            return b
+   248	        p = raw.get("path")
+   249	        if p and os.path.isfile(p):
+   250	            return open(p, "rb").read()
+   251	    return None
+   252	
+   253	
+   254	def _download_url(url: str) -> bytes | None:
+   255	    """Download audio from a public URL. Passes HF_TOKEN if set (needed for signed HF URLs)."""
+   256	    headers = {}
+   257	    if HF_TOKEN:
+   258	        headers["Authorization"] = f"Bearer {HF_TOKEN}"
+   259	    try:
+   260	        r = requests.get(url, headers=headers, timeout=60)
+   261	        r.raise_for_status()
+   262	        return r.content
+   263	    except Exception as e:
+   264	        print(f"      [warn] download failed for {url}: {e}")
+   265	        return None
+   266	
+   267	
+   268	# ---------------------------------------------------------------------------
+   269	# 5.  DATA LOADING
+   270	# ---------------------------------------------------------------------------
+   271	
+   272	def load_records() -> list[dict]:
+   273	    """Load every dataset; return flat list of record dicts."""
+   274	    all_records = []
+   275	
+   276	    for category, cfg in DATASET_MAP.items():
+   277	        (folder, transcript_col, id_col, dur_col,
+   278	         audio_col, needs_recast, uses_url_dl, subcat_col, lang_code) = cfg
+   279	
+   280	        folder_path = BASE_DIR / folder
+   281	        print(f"  Loading '{folder}'  ->  '{category}' ...")
+   282	
+   283	        if not folder_path.is_dir():
+   284	            print(f"    [WARN] folder not found — skipping.")
+   285	            continue
+   286	
+   287	        try:
+   288	            ds = load_from_disk(str(folder_path))
+   289	        except Exception as e:
+   290	            print(f"    [WARN] could not load: {e} — skipping.")
+   291	            continue
+   292	
+   293	        # Cast audio column to no-decode so we get raw bytes dict
+   294	        if audio_col and audio_col in ds.column_names and needs_recast:
+   295	            ds = ds.cast_column(audio_col, Audio(decode=False))
+   296	
+   297	        if transcript_col is None:
+   298	            print(f"    [WARN] no transcript column — clips will be skipped during scoring.")
+   299	
+   300	        for idx, row in enumerate(ds):
+   301	            # clip_id
+   302	            clip_id = str(row[id_col]) if (id_col and id_col in row and row[id_col]) else f"{category}_{idx:04d}"
+   303	
+   304	            # reference text
+   305	            ref_text = None
+   306	            if transcript_col and transcript_col in row:
+   307	                v = row[transcript_col]
+   308	                if isinstance(v, str) and v.strip():
+   309	                    ref_text = v
+   310	
+   311	            # subcategory
+   312	            subcategory = None
+   313	            if subcat_col and subcat_col in row and row[subcat_col] is not None:
+   314	                subcategory = str(row[subcat_col])
+   315	
+   316	            # duration
+   317	            duration_sec = None
+   318	            if dur_col and dur_col in row:
+   319	                try: duration_sec = float(row[dur_col])
+   320	                except (TypeError, ValueError): pass
+   321	
+   322	            # audio bytes
+   323	            audio_bytes = None
+   324	            if audio_col and audio_col in row:
+   325	                if uses_url_dl:
+   326	                    # store the URL string; will download lazily per-clip
+   327	                    audio_bytes = row[audio_col]   # a URL string
+   328	                else:
+   329	                    audio_bytes = _audio_bytes_from_value(row[audio_col])
+   330	
+   331	            all_records.append({
+   332	                "clip_id":        clip_id,
+   333	                "category":       category,
+   334	                "subcategory":    subcategory,
+   335	                "reference_text": ref_text,
+   336	                "audio_bytes":    audio_bytes,   # bytes | URL str | None
+   337	                "duration_sec":   duration_sec,
+   338	                "lang_code":      lang_code,
+   339	                "uses_url_dl":    uses_url_dl,
+   340	            })
+   341	
+   342	        print(f"    OK  {len(ds)} records.")
+   343	
+   344	    return all_records
+   345	
+   346	
+   347	# ---------------------------------------------------------------------------
+   348	# 6.  GNANI REST STT  (one clip at a time, checkpoint saved after each clip)
+   349	# ---------------------------------------------------------------------------
+   350	
+   351	def _gnani_headers() -> dict:
+   352	    return {"X-API-Key-ID": GNANI_API_KEY}
+   353	
+   354	
+   355	REQUEST_TIMEOUT_SEC = 60
+   356	
+   357	
+   358	def _is_retryable(exc: Exception) -> bool:
+   359	    """
+   360	    5xx, timeouts, and connection errors are transient -> worth retrying.
+   361	    4xx (bad request, auth, etc.) will fail again identically -> retrying wastes
+   362	    time/quota and hides the real problem, so fail fast on those instead.
+   363	    """
+   364	    if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+   365	        return exc.response.status_code >= 500 or exc.response.status_code == 429
+   366	    if isinstance(exc, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
+   367	        return True
+   368	    return False
+   369	
+   370	
+   371	def transcribe(audio_bytes: bytes, lang_code: str) -> tuple[str, float]:
+   372	    """
+   373	    POST one clip to the Gnani REST STT endpoint and return (transcript, latency_sec).
+   374	    latency_sec is the exact wall-clock time of the *successful* HTTP call only
+   375	    (retry backoff sleeps are excluded so the number reflects real API latency).
+   376	    Retries up to MAX_RETRIES times on transient failures (5xx / 429 / network),
+   377	    but fails immediately on non-transient errors (e.g. 400/401/403).
+   378	    Raises RuntimeError after all attempts are exhausted.
+   379	    """
+   380	    # Guess format from magic bytes to prevent 400 Bad Request from Vachana API
+   381	    header = audio_bytes[:10]
+   382	    filename = "clip.wav"
+   383	    mime_type = "audio/wav"
+   384	    if header.startswith(b"fLaC"):
+   385	        filename, mime_type = "clip.flac", "audio/flac"
+   386	    elif header.startswith(b"OggS"):
+   387	        filename, mime_type = "clip.ogg", "audio/ogg"
+   388	    elif header.startswith(b"\xff\xfb") or header.startswith(b"\xff\xf3") or header.startswith(b"ID3"):
+   389	        filename, mime_type = "clip.mp3", "audio/mpeg"
+   390	    elif header.startswith(b"RIFF"):
+   391	        filename, mime_type = "clip.wav", "audio/wav"
+   392	
+   393	    last_err = None
+   394	    for attempt in range(MAX_RETRIES + 1):
+   395	        try:
+   396	            t0 = time.perf_counter()
+   397	            r = requests.post(
+   398	                REST_URL,
+   399	                headers=_gnani_headers(),
+   400	                data={"language_code": lang_code, "format": "verbatim"},
+   401	                files={"audio_file": (filename, audio_bytes, mime_type)},
+   402	                timeout=REQUEST_TIMEOUT_SEC,
+   403	            )
+   404	            r.raise_for_status()
+   405	            latency_sec = time.perf_counter() - t0
+   406	            return r.json().get("transcript", "").strip(), latency_sec
+   407	        except Exception as exc:
+   408	            last_err = exc
+   409	            if not _is_retryable(exc):
+   410	                raise RuntimeError(f"Non-retryable error: {exc}") from exc
+   411	            if attempt < MAX_RETRIES:
+   412	                if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None and exc.response.status_code == 429:
+   413	                    wait = 30.0
+   414	                else:
+   415	                    wait = (2 ** attempt) + random.uniform(0, 0.5)  # 1s, 2s... + jitter
+   416	                print(f"\n      [retry {attempt+1}/{MAX_RETRIES}] {exc}. Waiting {wait:.1f}s...")
+   417	                time.sleep(wait)
+   418	    raise RuntimeError(f"All {MAX_RETRIES+1} attempts failed: {last_err}")
+   419	
+   420	
+   421	# ---------------------------------------------------------------------------
+   422	# 7.  TRANSCRIPTION ORCHESTRATION
+   423	# ---------------------------------------------------------------------------
+   424	
+   425	def transcribe_all(records: list[dict], ckpt: dict) -> dict:
+   426	    """
+   427	    Transcribe every scorable clip one-by-one via the REST API, grouped by
+   428	    category so each category gets its own progress bar.
+   429	    Skips clips already present in the checkpoint.
+   430	    Checkpoint is saved to disk immediately after each successful call
+   431	    (transcript + exact latency) so that re-running after a crash, or a
+   432	    Ctrl-C, only processes the remaining clips.
+   433	    Returns the updated checkpoint dict.
+   434	    """
+   435	    cats_order = list(DATASET_MAP.keys())   # preserve defined category order
+   436	    ordered = sorted(records, key=lambda r: cats_order.index(r["category"]))
+   437	
+   438	    need = [r for r in ordered
+   439	            if r["clip_id"] not in ckpt and r["reference_text"] is not None]
+   440	
+   441	    # Pre-resolve audio for URL-download categories
+   442	    scorable = []
+   443	    for rec in need:
+   444	        ab = rec["audio_bytes"]
+   445	        if rec["uses_url_dl"] and isinstance(ab, str):
+   446	            ab = _download_url(ab)
+   447	            rec["audio_bytes"] = ab
+   448	        if ab:
+   449	            scorable.append(rec)
+   450	        else:
+   451	            print(f"  [skip] {rec['clip_id']} — no audio")
+   452	
+   453	    already_done = sum(1 for r in records if r["clip_id"] in ckpt)
+   454	    total_todo   = len(scorable)
+   455	    print(f"  {already_done} already done (checkpoint). {total_todo} to transcribe.")
+   456	
+   457	    # Group remaining clips by category, preserving DATASET_MAP order,
+   458	    # so we can show one progress bar per category.
+   459	    by_cat: dict[str, list[dict]] = {}
+   460	    for rec in scorable:
+   461	        by_cat.setdefault(rec["category"], []).append(rec)
+   462	
+   463	    try:
+   464	        for cat in [c for c in cats_order if c in by_cat]:
+   465	            cat_recs = by_cat[cat]
+   466	            bar = tqdm(total=len(cat_recs), desc=f"{cat:<18}", unit="clip")
+   467	            wers, latencies, fails = [], [], 0
+   468	
+   469	            for rec in cat_recs:
+   470	                clip_id, lang_code = rec["clip_id"], rec["lang_code"]
+   471	                try:
+   472	                    hyp, latency_sec = transcribe(rec["audio_bytes"], lang_code)
+   473	                    ckpt[clip_id] = {"text": hyp, "latency_sec": latency_sec}
+   474	                    save_checkpoint(ckpt)          # persist after every clip
+   475	
+   476	                    # quick inline score for progress display
+   477	                    ref_n = normalize(rec["reference_text"])
+   478	                    hyp_n = normalize(hyp)
+   479	                    m = edit_distance_metrics(ref_n, hyp_n)
+   480	                    wers.append(m["wer"])
+   481	                    latencies.append(latency_sec)
+   482	                    bar.set_postfix(
+   483	                        wer=f"{m['wer']*100:.1f}%",
+   484	                        acc=f"{m['accuracy']*100:.1f}%",
+   485	                        lat=f"{latency_sec:.2f}s",
+   486	                        avg_wer=f"{(sum(wers)/len(wers))*100:.1f}%",
+   487	                        avg_lat=f"{(sum(latencies)/len(latencies)):.2f}s",
+   488	                    )
+   489	                except Exception as exc:
+   490	                    fails += 1
+   491	                    bar.set_postfix(FAILED=clip_id, err=str(exc)[:40])
+   492	                    print(f"\n  [{clip_id}] FAILED: {exc}")
+   493	                    # not added to ckpt, will be retried on next run
+   494	                finally:
+   495	                    bar.update(1)
+   496	
+   497	            bar.close()
+   498	            print(f"  -> {cat}: {len(wers)} ok, {fails} failed"
+   499	                  + (f", avg WER={sum(wers)/len(wers)*100:.1f}%" if wers else "")
+   500	                  + (f", avg latency={sum(latencies)/len(latencies):.2f}s" if latencies else ""))
+   501	    except KeyboardInterrupt:
+   502	        print("\n[interrupted] Checkpoint already saved up to the last completed clip. "
+   503	              "Re-run the script to resume.")
+   504	        raise
+   505	
+   506	    return ckpt
+   507	
+   508	
+   509	
+   510	# ---------------------------------------------------------------------------
+   511	# 9.  SCORING
+   512	# ---------------------------------------------------------------------------
+   513	
+   514	def score_records(records: list[dict], ckpt: dict) -> list[dict]:
+   515	    """Combine loaded records with transcriptions from ckpt and compute metrics."""
+   516	    results = []
+   517	
+   518	    def _skip(rec, error):
+   519	        results.append({**rec, "hypothesis_text": None, "ref_norm": None,
+   520	                         "hyp_norm": None, "wer": None, "cer": None,
+   521	                         "accuracy": None, "w_subs": None, "w_dels": None,
+   522	                         "w_ins": None, "c_subs": None, "c_dels": None,
+   523	                         "c_ins": None, "ref_word_count": None,
+   524	                         "latency_sec": None, "error": error})
+   525	
+   526	    for rec in records:
+   527	        clip_id = rec["clip_id"]
+   528	        ref_raw = rec["reference_text"]
+   529	
+   530	        if ref_raw is None:
+   531	            _skip(rec, "no_reference")
+   532	            continue
+   533	
+   534	        entry   = ckpt.get(clip_id)
+   535	        hyp_raw = ckpt_text(entry)
+   536	        if hyp_raw is None:
+   537	            _skip(rec, "no_transcript")
+   538	            continue
+   539	
+   540	        ref_norm = normalize(ref_raw)
+   541	        hyp_norm = normalize(hyp_raw)
+   542	        metrics  = edit_distance_metrics(ref_norm, hyp_norm)
+   543	
+   544	        results.append({
+   545	            **rec,
+   546	            "hypothesis_text": hyp_raw,
+   547	            "ref_norm": ref_norm, "hyp_norm": hyp_norm,
+   548	            **metrics, "latency_sec": ckpt_latency(entry), "error": None,
+   549	        })
+   550	
+   551	    scored = sum(1 for r in results if r["wer"] is not None)
+   552	    print(f"\n  Scored {scored}/{len(records)} clips.")
+   553	    return results
+   554	
+   555	
+   556	# ---------------------------------------------------------------------------
+   557	# 10. AGGREGATION
+   558	# ---------------------------------------------------------------------------
+   559	
+   560	def _percentile(vals: list[float], p: float) -> "float | None":
+   561	    """Nearest-rank percentile (0<=p<=100) over a sorted copy of vals."""
+   562	    if not vals:
+   563	        return None
+   564	    s = sorted(vals)
+   565	    idx = min(len(s) - 1, max(0, int(round(p / 100 * (len(s) - 1)))))
+   566	    return s[idx]
+   567	
+   568	
+   569	def _latency_stats(rows: list[dict]) -> dict:
+   570	    lats = [r["latency_sec"] for r in rows if r.get("latency_sec") is not None]
+   571	    if not lats:
+   572	        return {"lat_avg": None, "lat_min": None, "lat_max": None,
+   573	                "lat_p50": None, "lat_p95": None, "lat_n": 0}
+   574	    return {
+   575	        "lat_avg": sum(lats) / len(lats),
+   576	        "lat_min": min(lats),
+   577	        "lat_max": max(lats),
+   578	        "lat_p50": _percentile(lats, 50),
+   579	        "lat_p95": _percentile(lats, 95),
+   580	        "lat_n":   len(lats),
+   581	    }
+   582	
+   583	
+   584	def _agg_group(rows: list[dict]) -> dict:
+   585	    n = len(rows)
+   586	    if not n:
+   587	        return {"n": 0, "accuracy": None, "wer": None, "cer": None,
+   588	                "w_subs_rate": None, "w_dels_rate": None, "w_ins_rate": None,
+   589	                **_latency_stats([])}
+   590	
+   591	    def _rate(key):
+   592	        vals = [(r.get(key) or 0) / r["ref_word_count"]
+   593	                for r in rows if (r.get("ref_word_count") or 0) > 0]
+   594	        return sum(vals) / len(vals) if vals else None
+   595	
+   596	    return {
+   597	        "n":           n,
+   598	        "accuracy":    sum(r["accuracy"] for r in rows) / n,
+   599	        "wer":         sum(r["wer"]      for r in rows) / n,
+   600	        "cer":         sum(r["cer"]      for r in rows) / n,
+   601	        "w_subs_rate": _rate("w_subs"),
+   602	        "w_dels_rate": _rate("w_dels"),
+   603	        "w_ins_rate":  _rate("w_ins"),
+   604	        **_latency_stats(rows),
+   605	    }
+   606	
+   607	
+   608	def aggregate(results: list[dict]) -> dict:
+   609	    scored = [r for r in results if r.get("wer") is not None]
+   610	    cats   = sorted(set(r["category"] for r in results))
+   611	
+   612	    by_cat  = {}
+   613	    by_sub  = {}
+   614	    worst   = {}
+   615	
+   616	    for cat in cats:
+   617	        cs = [r for r in scored if r["category"] == cat]
+   618	        g  = _agg_group(cs)
+   619	        g["total_clips"] = sum(1 for r in results if r["category"] == cat)
+   620	        g["skipped"]     = g["total_clips"] - g["n"]
+   621	        by_cat[cat] = g
+   622	
+   623	        worst[cat] = sorted(cs, key=lambda r: r["wer"], reverse=True)[:3]
+   624	
+   625	        if any(r.get("subcategory") for r in cs):
+   626	            subs = sorted(set(r.get("subcategory") or "unknown" for r in cs))
+   627	            by_sub[cat] = {
+   628	                sc: _agg_group([r for r in cs if (r.get("subcategory") or "unknown") == sc])
+   629	                for sc in subs
+   630	            }
+   631	
+   632	    return {"by_category": by_cat, "by_subcategory": by_sub, "worst_clips": worst}
+   633	
+   634	
+   635	# ---------------------------------------------------------------------------
+   636	# 11. REPORT WRITING
+   637	# ---------------------------------------------------------------------------
+   638	
+   639	def _p(v, d=1):
+   640	    return f"{v*100:.{d}f}%" if v is not None else "--"
+   641	
+   642	
+   643	def _s(v, d=2):
+   644	    return f"{v:.{d}f}s" if v is not None else "--"
+   645	
+   646	
+   647	def write_report(agg: dict, path: Path) -> None:
+   648	    L = []
+   649	    L.append("# Gnani Prisma ASR Evaluation Report\n")
+   650	    L.append(f"_Generated: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}_\n")
+   651	
+   652	    L.append("\n---\n\n## Summary — Results by Category\n")
+   653	    L.append("| Category | n | Accuracy % | WER % | CER % | Subs% | Dels% | Ins% | "
+   654	              "Avg Latency | P50 Latency | P95 Latency | Min/Max Latency | Notes |\n")
+   655	    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+   656	
+   657	    for cat, g in sorted(agg["by_category"].items()):
+   658	        flag = " *" if g["n"] < LOW_SAMPLE_THRESHOLD else ""
+   659	        note = f"{g['skipped']} skipped" if g.get("skipped") else ""
+   660	        minmax = f"{_s(g['lat_min'])} / {_s(g['lat_max'])}" if g.get("lat_n") else "--"
+   661	        L.append(
+   662	            f"| {cat}{flag} | {g['n']} | {_p(g['accuracy'])} | {_p(g['wer'])} | {_p(g['cer'])} "
+   663	            f"| {_p(g['w_subs_rate'])} | {_p(g['w_dels_rate'])} | {_p(g['w_ins_rate'])} "
+   664	            f"| {_s(g['lat_avg'])} | {_s(g['lat_p50'])} | {_s(g['lat_p95'])} | {minmax} | {note} |\n"
+   665	        )
+   666	    L.append("\n_\\* fewer than 10 scored clips — average less reliable._\n")
+   667	    L.append("_Latency = exact wall-clock time of each clip's successful API call "
+   668	              "(retry backoff excluded); averaged per category above._\n")
+   669	
+   670	    if agg["by_subcategory"]:
+   671	        L.append("\n---\n\n## Subcategory Breakdowns\n")
+   672	        for cat, sub_dict in sorted(agg["by_subcategory"].items()):
+   673	            L.append(f"\n### {cat}\n")
+   674	            L.append("| Subcategory | n | Accuracy % | WER % | CER % | Avg Latency |\n")
+   675	            L.append("|---|---|---|---|---|---|\n")
+   676	            for sc, g in sorted(sub_dict.items()):
+   677	                flag = " *" if g["n"] < LOW_SAMPLE_THRESHOLD else ""
+   678	                L.append(f"| {sc}{flag} | {g['n']} | {_p(g['accuracy'])} | {_p(g['wer'])} | {_p(g['cer'])} "
+   679	                         f"| {_s(g['lat_avg'])} |\n")
+   680	
+   681	    L.append("\n---\n\n## Worst 3 Clips per Category\n")
+   682	    for cat, clips in sorted(agg["worst_clips"].items()):
+   683	        L.append(f"\n### {cat}\n")
+   684	        if not clips:
+   685	            L.append("_No scored clips._\n")
+   686	            continue
+   687	        for c in clips:
+   688	            L.append(
+   689	                f"- **{c['clip_id']}** — WER {_p(c['wer'])}\n"
+   690	                f"  - **Ref:** {c['ref_norm'] or '--'}\n"
+   691	                f"  - **Hyp:** {c['hyp_norm'] or '--'}\n"
+   692	            )
+   693	
+   694	    path.write_text("".join(L), encoding="utf-8")
+   695	    print(f"\n[OK] Report: {path}")
+   696	
+   697	
+   698	def write_csv(results: list[dict], path: Path) -> None:
+   699	    fields = [
+   700	        "clip_id","category","subcategory","duration_sec",
+   701	        "reference_text","hypothesis_text","ref_norm","hyp_norm",
+   702	        "wer","cer","accuracy",
+   703	        "w_subs","w_dels","w_ins","c_subs","c_dels","c_ins",
+   704	        "ref_word_count","latency_sec","error",
+   705	    ]
+   706	    with path.open("w", newline="", encoding="utf-8") as f:
+   707	        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+   708	        w.writeheader()
+   709	        for r in results:
+   710	            row = {k: r.get(k) for k in fields}
+   711	            for k in ("wer","cer","accuracy"):
+   712	                if row[k] is not None:
+   713	                    row[k] = f"{row[k]*100:.4f}"
+   714	            if row["latency_sec"] is not None:
+   715	                row["latency_sec"] = f"{row['latency_sec']:.4f}"
+   716	            w.writerow(row)
+   717	    print(f"[OK] CSV: {path}")
+   718	
+   719	
+   720	# ---------------------------------------------------------------------------
+   721	# 12. MAIN
+   722	# ---------------------------------------------------------------------------
+   723	
+   724	def main():
+   725	    print("=" * 70)
+   726	    print("  Gnani Prisma ASR Evaluation")
+   727	    print("=" * 70)
+   728	
+   729	    # if not GNANI_API_KEY:
+   730	    #     print(
+   731	    #         "\n[ERROR] GNANI_API_KEY is not set.\n"
+   732	    #         "  Either export it:\n"
+   733	    #         "    export GNANI_API_KEY=<your_key>\n"
+   734	    #         "  or add it to the .env file in this directory.\n"
+   735	    #     )
+   736	    #     sys.exit(1)
+   737	
+   738	    run_start = time.perf_counter()
+   739	
+   740	    # Step 1 — load
+   741	    print("\n-- Step 1: Loading datasets --")
+   742	    records = load_records()
+   743	    print(f"\nTotal records: {len(records)}")
+   744	
+   745	    # Step 2 — transcribe (REST, one clip at a time, checkpoint-resume)
+   746	    print("\n-- Step 2: Transcribing (REST API, checkpoint-resume) --")
+   747	    ckpt = load_checkpoint()
+   748	    try:
+   749	        ckpt = transcribe_all(records, ckpt)
+   750	    except KeyboardInterrupt:
+   751	        print(f"\n[STOPPED] Interrupted by user after {time.perf_counter()-run_start:.1f}s. "
+   752	              f"Checkpoint saved — re-run to resume from where you left off.")
+   753	        sys.exit(130)
+   754	
+   755	    # Step 3 — score
+   756	    print("\n-- Step 3: Scoring --")
+   757	    results = score_records(records, ckpt)
+   758	
+   759	    # Step 4 — aggregate
+   760	    print("\n-- Step 4: Aggregating --")
+   761	    agg = aggregate(results)
+   762	
+   763	    # Step 5 — write outputs
+   764	    print("\n-- Step 5: Writing outputs --")
+   765	    write_csv(results, CSV_PATH)
+   766	    write_report(agg, REPORT_PATH)
+   767	
+   768	    elapsed = time.perf_counter() - run_start
+   769	    print(f"\n[DONE] Evaluation complete in {elapsed:.1f}s.\n")
+   770	
+   771	
+   772	if __name__ == "__main__":
+   773	    main()

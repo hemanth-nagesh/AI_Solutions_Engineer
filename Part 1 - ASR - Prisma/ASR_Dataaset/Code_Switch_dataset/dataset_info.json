@@ -1,0 +1,20 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "audio_file_name": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "transcription": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio": {
+      "decode": false,
+      "_type": "Audio"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

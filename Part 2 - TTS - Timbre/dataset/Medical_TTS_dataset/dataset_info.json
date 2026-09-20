@@ -1,0 +1,80 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "en",
+  "dataset_name": "eka-medical-asr-evaluation-dataset",
+  "dataset_size": 237858360,
+  "description": "",
+  "download_size": 236764009,
+  "features": {
+    "md5_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "file_name": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio": {
+      "decode": false,
+      "_type": "Audio"
+    },
+    "md5_audio": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "duration": {
+      "dtype": "float32",
+      "_type": "Value"
+    },
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio_language": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "text_language": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "session_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "speaker": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "type_concept": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "recording_context": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "medical_entities": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 474622369,
+  "splits": {
+    "test": {
+      "name": "test",
+      "num_bytes": 237858360,
+      "num_examples": 3619,
+      "dataset_name": "eka-medical-asr-evaluation-dataset"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

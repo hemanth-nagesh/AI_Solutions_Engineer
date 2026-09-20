@@ -1,0 +1,52 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "common_voice",
+  "dataset_name": "open-asr-leaderboard",
+  "dataset_size": 729217526,
+  "description": "",
+  "download_size": 720365151,
+  "features": {
+    "audio": {
+      "decode": false,
+      "_type": "Audio"
+    },
+    "dataset": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio_length_s": {
+      "dtype": "float64",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 1449582677,
+  "splits": {
+    "test": {
+      "name": "test",
+      "num_bytes": 729217526,
+      "num_examples": 16334,
+      "shard_lengths": [
+        9145,
+        7189
+      ],
+      "dataset_name": "open-asr-leaderboard"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "clip_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio": {
+      "bytes": {
+        "dtype": "binary",
+        "_type": "Value"
+      },
+      "path": {
+        "dtype": "string",
+        "_type": "Value"
+      }
+    },
+    "transcript": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "number_type": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "audio_length_s": {
+      "dtype": "float64",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

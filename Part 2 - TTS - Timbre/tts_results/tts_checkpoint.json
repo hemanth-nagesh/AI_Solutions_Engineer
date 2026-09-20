@@ -1,0 +1,362 @@
+{
+  "medical_0000": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0000.wav",
+    "whisper_transcript": "Take Metformin, take A to Z multivitamin capsules.\n What else?\n Take thyroxine 25 micrograms tablet thrice a day.",
+    "tts_latency": 3.2197722920100205,
+    "whisper_latency": 1.119015667005442
+  },
+  "medical_0001": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0001.wav",
+    "whisper_transcript": "Thanks.",
+    "tts_latency": 0.5323142919951351,
+    "whisper_latency": 0.7347429170040414
+  },
+  "medical_0002": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0002.wav",
+    "whisper_transcript": "My suggestion is you should do a little bit of gargling in the morning as soon as you get up.\n Also avoid spicy food.",
+    "tts_latency": 2.320956874988042,
+    "whisper_latency": 1.0173159169935388
+  },
+  "medical_0003": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0003.wav",
+    "whisper_transcript": "Your symptoms suggest that you have a URTI infection and should be fine within a week's time.",
+    "tts_latency": 1.5976814160094364,
+    "whisper_latency": 0.9157243750087218
+  },
+  "medical_0004": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0004.wav",
+    "whisper_transcript": "So, let's prescribe you one Zincuvit once in a day.\n For your eyes, use Patade eye drops.",
+    "tts_latency": 5.936776541988365,
+    "whisper_latency": 1.0131965420005145
+  },
+  "medical_0005": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0005.wav",
+    "whisper_transcript": "Give him Dolo, give him Allegra.\n Also make sure that you gargle using warm water.",
+    "tts_latency": 1.2573749169969233,
+    "whisper_latency": 0.9456079170049634
+  },
+  "medical_0006": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0006.wav",
+    "whisper_transcript": "clear.",
+    "tts_latency": 0.419796292000683,
+    "whisper_latency": 0.7310020000004442
+  },
+  "medical_0007": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0007.wav",
+    "whisper_transcript": "and avoid junk food.",
+    "tts_latency": 1.6727536250109551,
+    "whisper_latency": 0.7649033329944359
+  },
+  "medical_0008": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0008.wav",
+    "whisper_transcript": "Patient is allergic to Dolo 650.\n Patient consumes alcohol 5 times a week.\n Currently smokes.\n I prescribe Crosin 650 and I suggest getting CBC lab test done.",
+    "tts_latency": 2.3169742499885615,
+    "whisper_latency": 1.1178489579906454
+  },
+  "medical_0009": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0009.wav",
+    "whisper_transcript": "Pulsary 25/min, body temperature 32.\n Patient is currently having kidney stones.",
+    "tts_latency": 2.6615697080123937,
+    "whisper_latency": 0.9228175829921383
+  },
+  "medical_0010": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0010.wav",
+    "whisper_transcript": "Diabetes for Father Diabetes in Medical Conditions since 3 years.",
+    "tts_latency": 1.3420790410018526,
+    "whisper_latency": 0.8619810410018545
+  },
+  "medical_0011": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0011.wav",
+    "whisper_transcript": "Dolo 650 tablet thrice a day after meals for 5 days.\n Panto DSR 40 for 6 days, once a day before breakfast.\n And give Jalusil tablet, give Eno sachet and also take Calpol, take Glymparide.",
+    "tts_latency": 53.1597099579958,
+    "whisper_latency": 1.3385547080106335
+  },
+  "medical_0012": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0012.wav",
+    "whisper_transcript": "Zekuv cough syrup 3 times a day for 5 days.\n Allegra 120 mg 2 times a day for 5 days.\n And vitamin D and B 3 times a day for a week.",
+    "tts_latency": 1.526053708003019,
+    "whisper_latency": 1.1346740420121932
+  },
+  "medical_0013": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0013.wav",
+    "whisper_transcript": "Advice is take some steam and take rest and have fun, whatever.",
+    "tts_latency": 0.8457299159927061,
+    "whisper_latency": 0.8697913329961011
+  },
+  "medical_0014": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0014.wav",
+    "whisper_transcript": "cold blocked nose and cough.\n The possible diagnosis is it could be influenza since 3 days\n or it could be dengue or malaria.\n Lab investigation of dengue and malaria suggested for the patient.",
+    "tts_latency": 1.6430127089988673,
+    "whisper_latency": 1.1445224579947535
+  },
+  "medical_0015": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0015.wav",
+    "whisper_transcript": "Her lab results say vitamin B12 is 300 mg/mL and HbA1c is 6.\n She has symptoms of fever, pain in throat.",
+    "tts_latency": 1.4185697080101818,
+    "whisper_latency": 1.0488549590081675
+  },
+  "medical_0016": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0016.wav",
+    "whisper_transcript": "Hey, hello.\n Patient's name is Arya and he is 30 years old.\n Patient should take Dolo 653 times a day for the next 3 days\n and he should take Crosin for the next 1 week.\n SOS.",
+    "tts_latency": 1.6276665420009522,
+    "whisper_latency": 1.269771374994889
+  },
+  "medical_0017": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0017.wav",
+    "whisper_transcript": "Do not eat junk food. I prescribe DOLO 650 for next 5 days.\n Patient's mother is having hypertension since last 5 years.",
+    "tts_latency": 1.4765873330034083,
+    "whisper_latency": 1.011767082993174
+  },
+  "medical_0018": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0018.wav",
+    "whisper_transcript": "Patient is having severe body ache. Please take rest and drink lots of fluids.",
+    "tts_latency": 0.8494396250025602,
+    "whisper_latency": 0.880644625009154
+  },
+  "medical_0019": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0019.wav",
+    "whisper_transcript": "I also prescribe HbA1c lab test.",
+    "tts_latency": 1.176421083000605,
+    "whisper_latency": 0.8369351669971365
+  },
+  "medical_0020": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0020.wav",
+    "whisper_transcript": "Consultation. Patient is having mild fever, headache and body ache.\n I prescribe him Dolo 650 for the next 5 days. Please take care.",
+    "tts_latency": 1.7998205830081133,
+    "whisper_latency": 1.037448790986673
+  },
+  "medical_0021": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0021.wav",
+    "whisper_transcript": "and come see me after 7 days.",
+    "tts_latency": 0.5513629159977427,
+    "whisper_latency": 0.7980447919981088
+  },
+  "medical_0022": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0022.wav",
+    "whisper_transcript": "Make sure that you have one every day.\n For your back, put some Volitra lotion slash gel on the lower back before you go to bed.",
+    "tts_latency": 1.037415124999825,
+    "whisper_latency": 1.0289003749930998
+  },
+  "medical_0023": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0023.wav",
+    "whisper_transcript": "Post lunch, take, do warm water gargles morning and evening.\n Also, azithromycin. It's an antibiotic.\n It'll help if there are any bacterial infections.",
+    "tts_latency": 1.553407416009577,
+    "whisper_latency": 1.1451581660076044
+  },
+  "medical_0024": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/medical_0024.wav",
+    "whisper_transcript": "3 times in a day. Allegra 120 mg for your infection and allergies once in a day.",
+    "tts_latency": 1.4451921669970034,
+    "whisper_latency": 0.9214243329915917
+  },
+  "p273_293": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p273_293.wav",
+    "whisper_transcript": "And they were being paid.",
+    "tts_latency": 0.44980758299061563,
+    "whisper_latency": 0.7861964999901829
+  },
+  "p236_468": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p236_468.wav",
+    "whisper_transcript": "The bill would be massive.",
+    "tts_latency": 0.6903428750083549,
+    "whisper_latency": 0.7761585420084884
+  },
+  "p226_093": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p226_093.wav",
+    "whisper_transcript": "It's never too late.",
+    "tts_latency": 0.48055695900984574,
+    "whisper_latency": 0.7756712089903885
+  },
+  "p256_223": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p256_223.wav",
+    "whisper_transcript": "At the top of the structure will remain the post of headteacher.",
+    "tts_latency": 0.9963699170039035,
+    "whisper_latency": 0.8880686250049621
+  },
+  "p282_143": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p282_143.wav",
+    "whisper_transcript": "He felt that everything that was said about asylum seekers was negative.",
+    "tts_latency": 0.8294484579964774,
+    "whisper_latency": 0.8488552079943474
+  },
+  "p274_225": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p274_225.wav",
+    "whisper_transcript": "Suddenly, the fir park side were in disarray.",
+    "tts_latency": 0.7985758750000969,
+    "whisper_latency": 0.837049334004405
+  },
+  "p227_324": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p227_324.wav",
+    "whisper_transcript": "McNaughton was not so sure.",
+    "tts_latency": 0.5921179580036551,
+    "whisper_latency": 0.7993862080038525
+  },
+  "p257_063": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p257_063.wav",
+    "whisper_transcript": "Have a look at our accounts.",
+    "tts_latency": 0.47484437499952037,
+    "whisper_latency": 0.7968517919944134
+  },
+  "p228_043": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p228_043.wav",
+    "whisper_transcript": "It is urgent.",
+    "tts_latency": 0.41633924999041483,
+    "whisper_latency": 0.7471208339993609
+  },
+  "p258_320": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p258_320.wav",
+    "whisper_transcript": "My body is clearly capable.",
+    "tts_latency": 0.5481151249987306,
+    "whisper_latency": 0.7803739160008263
+  },
+  "p267_320": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p267_320.wav",
+    "whisper_transcript": "He declined to reveal the offer price which was accepted.",
+    "tts_latency": 0.7425997499958612,
+    "whisper_latency": 0.8331976670015138
+  },
+  "p239_051": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p239_051.wav",
+    "whisper_transcript": "New York is my home.",
+    "tts_latency": 0.7024642089963891,
+    "whisper_latency": 0.7752589170122519
+  },
+  "p229_386": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p229_386.wav",
+    "whisper_transcript": "Three years ago, he would have been",
+    "tts_latency": 0.510059625012218,
+    "whisper_latency": 0.7998975420050556
+  },
+  "p276_331": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p276_331.wav",
+    "whisper_transcript": "This year, it will amount to a few hundred thousand pounds.",
+    "tts_latency": 1.038249082994298,
+    "whisper_latency": 0.8516052499908255
+  },
+  "p259_440": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p259_440.wav",
+    "whisper_transcript": "His ambition was made this year when he played alongside his son.",
+    "tts_latency": 0.8465698329964653,
+    "whisper_latency": 0.8475247080059489
+  },
+  "p234_126": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p234_126.wav",
+    "whisper_transcript": "He wanted to record the group.",
+    "tts_latency": 0.6397859579883516,
+    "whisper_latency": 0.7879586250055581
+  },
+  "p333_358": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p333_358.wav",
+    "whisper_transcript": "It has been recorded twice.",
+    "tts_latency": 0.48002616700250655,
+    "whisper_latency": 0.7803304160042899
+  },
+  "p303_277": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p303_277.wav",
+    "whisper_transcript": "Last year, however, was a different story.",
+    "tts_latency": 0.6571106670016889,
+    "whisper_latency": 0.8159866659989348
+  },
+  "p347_134": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p347_134.wav",
+    "whisper_transcript": "This year it will be Billy Crystal.",
+    "tts_latency": 0.5648372499999823,
+    "whisper_latency": 0.7927106249990175
+  },
+  "p245_289": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p245_289.wav",
+    "whisper_transcript": "Sunday's game was not a trial.",
+    "tts_latency": 0.631756458999007,
+    "whisper_latency": 0.8082924580085091
+  },
+  "p330_256": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p330_256.wav",
+    "whisper_transcript": "It could have been a hammering by now.",
+    "tts_latency": 0.4846490000054473,
+    "whisper_latency": 0.8074944999971194
+  },
+  "p304_297": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p304_297.wav",
+    "whisper_transcript": "What will they call?",
+    "tts_latency": 0.5077582080120919,
+    "whisper_latency": 0.7600802079978166
+  },
+  "p335_187": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p335_187.wav",
+    "whisper_transcript": "We do things in an appropriate way.",
+    "tts_latency": 0.6380556669901125,
+    "whisper_latency": 0.7979480830108514
+  },
+  "p248_034": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p248_034.wav",
+    "whisper_transcript": "Suggestions of the action being a punishment were dismissed.",
+    "tts_latency": 0.7444116659899009,
+    "whisper_latency": 0.8368890410056338
+  },
+  "p351_302": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p351_302.wav",
+    "whisper_transcript": "I would love to see it back there.",
+    "tts_latency": 0.6549382079974748,
+    "whisper_latency": 0.8066752090089722
+  },
+  "p225_177": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p225_177.wav",
+    "whisper_transcript": "The event was held in the council's headquarters in Hamilton.",
+    "tts_latency": 0.8858405419887276,
+    "whisper_latency": 0.8417782920005266
+  },
+  "p264_013": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p264_013.wav",
+    "whisper_transcript": "Some have accepted it as a miracle without physical explanation.",
+    "tts_latency": 0.6827138750086306,
+    "whisper_latency": 0.832461375001003
+  },
+  "p246_114": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p246_114.wav",
+    "whisper_transcript": "That was the lesson to be learned from the European Championships.",
+    "tts_latency": 0.7338704580033664,
+    "whisper_latency": 0.8403367919963785
+  },
+  "p273_271": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p273_271.wav",
+    "whisper_transcript": "Brown is an interesting man, but he is not desperate.",
+    "tts_latency": 0.9380141250003362,
+    "whisper_latency": 0.8253630410035839
+  },
+  "p303_306": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p303_306.wav",
+    "whisper_transcript": "Some have other commitments.",
+    "tts_latency": 0.6863976669992553,
+    "whisper_latency": 0.761738166998839
+  },
+  "p345_263": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p345_263.wav",
+    "whisper_transcript": "I'm pleased with some aspects of the performance.",
+    "tts_latency": 0.5735461250005756,
+    "whisper_latency": 0.8201746249978896
+  },
+  "p236_313": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p236_313.wav",
+    "whisper_transcript": "It was an excellent performance.",
+    "tts_latency": 0.7080940420128172,
+    "whisper_latency": 0.7635493749985471
+  },
+  "p255_185": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p255_185.wav",
+    "whisper_transcript": "The event was held in the council's headquarters in Hamilton.",
+    "tts_latency": 0.8299645000079181,
+    "whisper_latency": 0.8378242909966502
+  },
+  "p330_145": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p330_145.wav",
+    "whisper_transcript": "The results are sometimes contentious.",
+    "tts_latency": 0.5580335830018157,
+    "whisper_latency": 0.7845069169998169
+  },
+  "p281_020": {
+    "audio_path": "/Users/hemanth/Coding & Staff/Gnani_ai/tts_results/generated_audio/p281_020.wav",
+    "whisper_transcript": "Many complicated ideas about the rainbow have been formed.",
+    "tts_latency": 0.7539651249971939,
+    "whisper_latency": 0.8243452919996344
+  }
+}
