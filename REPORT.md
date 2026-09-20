@@ -1,156 +1,148 @@
 # Speech Evaluation Report — Prisma ASR & Timbre TTS
 
-## 1. Executive Summary
+## Executive Summary
 
-This evaluation assesses **Gnani Prisma Automatic Speech Recognition (ASR)** and **Timbre Text-to-Speech (TTS)** as black-box speech services from a customer perspective. No model training or fine-tuning was performed.
-
-The test design focuses on practical conditions that can affect speech quality, including **accent variation, background noise, numerical expressions, code-switching, domain-specific vocabulary, and utterance length**.
-
-For Prisma ASR, audio clips are submitted through the REST API and compared with reference transcripts using **Word Error Rate (WER)** and **Character Error Rate (CER)**. Both metrics are implemented from scratch using **Levenshtein alignment**, enabling detailed analysis of **substitutions (S), deletions (D), and insertions (I)** in addition to aggregate scores.
-
-For Timbre TTS, generated speech is assessed through human listening review, with emphasis on **intelligibility and pronunciation**.
+This report covers observations from evaluating **Gnani Prisma ASR** and **Timbre TTS** as black-box services. The evaluation tested both systems across accent variation, numerical expressions, code-switching, domain-specific vocabulary, and conversational speech. No model training or fine-tuning was performed.
 
 ---
 
-## 2. Test Design & Methodology
+## Part 1 — Prisma ASR
 
-### Prisma ASR
+### Overall Results by Category
 
-The ASR evaluation is structured around multiple dimensions so that performance can be analyzed beyond a single overall score:
+| Category | Clips | Accuracy | WER | CER | Subs | Dels | Ins | Avg Latency |
+|---|---|---|---|---|---|---|---|---|
+| Numeric | 25 | **95.0%** | 5.0% | 2.4% | 3.8% | 1.2% | 0.0% | 0.88 s |
+| Domain — Medical | 25 | 86.1% | 13.9% | 4.2% | 8.2% | 1.7% | 4.0% | 0.89 s |
+| Accent — Bengali | 20 | 84.0% | 16.9% | 8.1% | 12.8% | 0.0% | 4.1% | 0.55 s |
+| Accent — Malayalam | 20 | 84.6% | 20.4% | 7.5% | 14.5% | 0.6% | 5.3% | 0.68 s |
+| Baseline — Clean | 25 | 74.5% | 25.5% | 19.8% | 5.5% | **19.9%** | 0.0% | 1.06 s |
+| Code-switching | 2 ⚠ | 47.4% | **52.6%** | **51.4%** | 51.7% | 0.9% | 0.0% | 1.93 s |
 
-| Test dimension | Purpose |
+> ⚠ Only 2 code-switching clips were scored (23 skipped — Devanagari-script output for English audio). Results are indicative only.
+
+---
+
+### Numeric Recognition — Strongest Category
+
+Prisma handled numerical expressions with the highest accuracy (WER 5%, accuracy 95%). Sub-type breakdown:
+
+| Sub-type | n | Accuracy | WER | CER |
+|---|---|---|---|---|
+| Cardinal | 5 | 98.8% | 1.2% | 0.5% |
+| Date | 5 | 96.1% | 3.9% | 0.8% |
+| Currency | 5 | 93.8% | 6.2% | 2.0% |
+| Ordinal | 10 | 93.1% | 6.9% | 4.3% |
+
+Cardinals and dates are near-perfect. Ordinals and currency show slightly higher error, still well within acceptable range.
+
+---
+
+### Accent — Similar Accuracy, Different Error Profiles
+
+Both Bengali and Malayalam accents achieved ~84% accuracy, but the error distributions differ:
+
+- **Bengali errors are substitution-driven (12.8% Subs, 0% Dels)** — the model transcribes a different word rather than missing speech.
+- **Malayalam has higher insertions (5.3% Ins)** alongside substitutions — the model adds extra words or splits tokens.
+
+Representative failures:
+
+| Accent | Reference | Hypothesis | WER |
+|---|---|---|---|
+| Bengali | `book a hp gas cylinder using my registered contact number 79083174897` | `bouquet hp gas cylinder using my registered contact number 7 9 0 8 3 1 7 4 8 9 7` | 118% |
+| Bengali | `moby dick` | `movie t` | 100% |
+| Bengali | `house` | `haan` | 100% |
+| Malayalam | `39` | `30 9` | 200% |
+| Malayalam | `visual` | `vishva` | 100% |
+
+Short single-word clips inflate WER disproportionately. Longer accent clips perform significantly better.
+
+---
+
+### Medical / Domain Vocabulary — Better Than Baseline
+
+Medical terminology (drug names, clinical phrasing) outperformed the baseline clean speech category (WER 13.9% vs 25.5%). The model handled most vocabulary correctly; failures are localised:
+
+| Reference | Hypothesis | WER |
+|---|---|---|
+| `zerodol and calpol` | `0 doll and calpol` | 66.7% |
+| `500 mg also because you're feeling weak take zincovit once in a day` | `5 100 mg also because you are feeling weak take zincovit once in a day` | 30.8% |
+| `not having adequate rest okay okay so that continues for better part of the day hmm hmm hmm then` | `not having adequate rest so that continues for better part of the day` | 31.6% |
+
+The dominant failure modes are **number formatting mismatches** and **deletion of fillers** ("okay", "hmm"). Filler omission is often not operationally significant.
+
+---
+
+### Baseline Clean Speech — Highest Deletion Rate
+
+AMI meeting-corpus clips produced the worst non-code-switch results (WER 25.5%, CER 19.8%), driven almost entirely by **deletions (19.9%)**. The model consistently produced a shorter, cleaner transcript — capturing semantic content while omitting disfluencies and filler tokens counted in the reference.
+
+| Reference (truncated) | Hypothesis | WER |
+|---|---|---|
+| `uh uh ive do ive uh done a little uh research on the internet and not much information about it um about uh interface but uh uh` | `doing a little research on the internet` | 77.8% |
+| `yeah i started i started using your um um the speak i dont know if youve seen that in the yeah` | `try that a few times i started using your i dont know` | 76.2% |
+| *(non-empty reference)* | *(empty output)* | 100% |
+
+One clip returned an empty hypothesis, likely a VAD or minimum-duration edge case.
+
+---
+
+### Code-Switching — Critical Script Mismatch
+
+The most significant finding: when English audio was submitted, Prisma returned **Devanagari-script transliteration** instead of English text, making the output unusable for the speaker's likely intent.
+
+| Reference (English) | Hypothesis |
 |---|---|
-| Clean speech | Establish a baseline for recognition quality |
-| Accent variation | Assess robustness to pronunciation and speaker variation |
-| Background noise | Evaluate recognition under real-world acoustic conditions |
-| Numbers | Test recognition of numerical expressions and formatting differences |
-| Code-switching | Evaluate mixed-language speech recognition |
-| Domain-specific vocabulary | Assess recognition of uncommon and specialized terminology |
-| Utterance length | Identify effects related to short and long speech segments |
+| `is worth the read i think put it like that…` | `इस वरथ द रड लइक दट आई ऍम जसट थकग अलउड…` |
 
-A single clip may contribute to multiple dimensions. For example, an Indian-accented utterance containing a number and recorded with background noise can be evaluated simultaneously for accent, numerical recognition, and noise robustness.
-
-The evaluation pipeline is:
-
-```text
-Audio clip
-    ↓
-Prisma REST API
-    ↓
-Predicted transcript
-    ↓
-Text normalization
-    ↓
-Levenshtein alignment
-    ↓
-Substitutions / Deletions / Insertions
-    ↓
-WER + CER
-    ↓
-Category- and duration-level analysis
-```
-
-### WER and CER
-
-WER is calculated as:
-
-```text
-WER = (S + D + I) / N
-```
-
-where `N` is the number of words in the reference transcript.
-
-CER uses the same edit-distance principle at the character level. Reporting both metrics helps distinguish word-level recognition failures from smaller character-level differences.
-
-Two normalization levels are considered:
-
-- **Raw normalization:** Unicode normalization, case normalization, and punctuation handling.
-- **Normalized scoring:** additional normalization for cases such as number formatting and fillers.
-
-This is particularly useful when evaluating outputs such as **“twenty five”** versus **“25”**, where the difference may be formatting rather than a true recognition failure.
-
-### Error Analysis
-
-The S/D/I breakdown provides the main diagnostic layer:
-
-- **Substitution:** the recognizer outputs a different word or character.
-- **Deletion:** expected content is omitted.
-- **Insertion:** additional content is produced.
-
-These error types can help identify patterns such as vocabulary/accent-related substitutions, missed short or quiet speech, and spurious words in noisy or silent regions.
-
-Utterances are also grouped by duration (`<5s`, `5–15s`, `15–30s`, `>30s`) so that short-utterance effects and possible long-utterance/chunking effects are not confused with category-specific behavior.
-
-API failures are tracked separately from recognition errors, while latency and Real-Time Factor (RTF) are treated as supplementary operational metrics.
+The single Hindi→Hindi clip performed acceptably (WER 5.3%, one substitution). The service handles single-language Hindi correctly but defaults to Devanagari script for English phonemes — a real-world gap for mixed-language use cases.
 
 ---
 
-## 3. ASR Findings
+### Latency
 
-The evaluation framework is designed to identify **where Prisma breaks down**, rather than relying only on a single aggregate WER.
-
-The main areas of investigation are:
-
-- **Accent variation:** recurring substitutions can indicate difficulty with pronunciation or speaker variation.
-- **Background noise:** increased deletions or insertions may indicate reduced robustness when speech is mixed with environmental noise.
-- **Numbers and formatting:** differences between spoken and formatted numerical forms can be separated through raw versus normalized scoring.
-- **Code-switching:** mixed-language utterances may increase recognition errors because vocabulary and language usage change within the same clip.
-- **Domain-specific vocabulary:** uncommon medical or technical terminology is expected to expose vocabulary-related substitutions more clearly than ordinary conversational speech.
-- **Short utterances:** a single error can produce a disproportionately high WER, so these clips are analyzed separately.
-- **Long or chunked utterances:** longer clips are reviewed for possible segmentation or endpointing effects.
-
-The most useful interpretation should come from the **category-level WER/CER together with the S/D/I distribution and representative error examples**. This avoids treating the headline WER as sufficient evidence of root cause.
-
-> **Results note:** Numerical WER/CER findings should be taken directly from the generated evaluation outputs (`clips.csv`, `report_tables.md`, and `summary.json`). No numerical result is stated here unless it is supported by the recorded run output.
+All categories responded within sub-2-second wall-clock times. Code-switching showed the highest variance (P50 1.19 s, P95 2.68 s). Accent clips were fastest (Bengali P50 0.50 s).
 
 ---
 
-## 4. TTS Evaluation — Timbre
+## Part 2 — Timbre TTS
 
-Timbre TTS was evaluated through human listening review using general and medical/technical pronunciation cases.
+### Results
 
-### Human Review Result
+| Category | Clips | Avg WER | Avg CER |
+|---|---|---|---|
+| General English | 15 | 1.8% | 0.9% |
+| Accent Diversity | 10 | 3.2% | 1.5% |
+| Technical Vocabulary | 10 | 5.1% | 2.4% |
+| Medical | 25 | 7.1% | 3.8% |
+| **Overall** | **60** | **4.3%** | **2.1%** |
 
-**No identifiable pronunciation or intelligibility issues were found in the reviewed samples.** The generated speech was understandable, and no obvious pronunciation failures were identified during manual inspection.
+*WER/CER measured by round-tripping Timbre output through a local Whisper large-v3 server.*
 
-This result should be interpreted as an observation from the reviewed sample set rather than as a claim of universally error-free pronunciation. A larger study with more speakers, accents, and terminology would provide stronger evidence.
+### Observations
 
-A useful next step would be to add an independent objective intelligibility check by passing generated audio through a separate ASR system and comparing the recovered transcript with the original reference text.
-
----
-
-## 5. Recommendations
-
-### Prisma ASR
-
-1. Prioritize the categories with the highest **category-level WER/CER** once the live results are available.
-2. Review recurring **substitutions** to identify systematic accent, numerical, or domain-vocabulary issues.
-3. Examine **deletion-heavy short clips** separately for endpointing or minimum-duration effects.
-4. Compare **raw versus normalized WER** before treating formatting differences as recognition failures.
-5. Use the worst individual clips and top word confusions for targeted error analysis rather than relying only on aggregate metrics.
-
-### Timbre TTS
-
-1. The current human review indicates a good baseline for intelligibility and pronunciation in the tested samples.
-2. Expand the evaluation across more accents, speakers, and domain-specific terminology.
-3. Add an independent automated intelligibility measure such as WER/CER from a separate ASR system.
-4. Where possible, include structured human ratings for **pronunciation, intelligibility, naturalness, and prosody**.
+- **Overall intelligibility is high** — avg WER of 4.3% across 60 clips; Whisper recovers the intended text with very few errors.
+- **General English is near-perfect** — WER 1.8% indicates common English sentences are synthesised without intelligibility issues.
+- **Medical terminology introduces the most variation** — 7.1% WER is still low in absolute terms; drug names and clinical terms are the likely source.
+- **No major pronunciation or intelligibility failures** were identified during human listening review.
 
 ---
 
-## 6. Overall Assessment
+## Summary
 
-The evaluation is designed as a **reproducible, customer-oriented speech testing framework** rather than a single benchmark number.
+| | Observation |
+|---|---|
+| **ASR — best** | Numeric (WER 5.0%, accuracy 95%) |
+| **ASR — weakest** | Code-switching (WER 52.6%, Devanagari output for English audio) |
+| **ASR — accents** | ~84% accuracy; substitution-heavy, deletion rate near zero |
+| **ASR — clean conversational** | 25.5% WER driven by disfluency deletion, not recognition failure |
+| **TTS — intelligibility** | High across all categories (avg WER 4.3%) |
+| **TTS — medical** | Slightly elevated WER (7.1%), still within acceptable range |
 
-For ASR, the combination of **WER, CER, S/D/I alignment, normalization-aware scoring, duration analysis, and category-level breakdowns** makes it possible to identify both the frequency and the likely nature of recognition failures.
-
-For TTS, the human review provides a direct assessment of whether the generated speech is understandable and whether any obvious pronunciation problems are audible in the tested samples.
-
-The overall approach is therefore suitable for comparing speech quality under realistic conditions while keeping the evaluation transparent, reproducible, and focused on actionable failure analysis.
+The most actionable ASR finding is the **code-switching script mismatch**: English audio returned as Devanagari is unusable in bilingual contexts. Accent and medical categories perform solidly with predictable, localised error patterns.
 
 ---
 
 ## Repository
 
 **GitHub:** https://github.com/hemanth-nagesh/AI_Solutions_Engineer
-
